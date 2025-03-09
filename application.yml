@@ -1,0 +1,16 @@
+general:
+  kafka-topic: my-topic-name
+  consumer:
+    group-id: midas-core-group
+
+spring:
+  datasource:
+    platform: h2
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+  h2:
+    console:
+      enabled: true
+      path: /h2-console

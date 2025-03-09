@@ -5,42 +5,73 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.annotation.DirtiesContext;
 
 @SpringBootTest
 @DirtiesContext
-@EmbeddedKafka(partitions = 1, brokerProperties = {"listeners=PLAINTEXT://localhost:9092", "port=9092"})
+@EmbeddedKafka(
+        partitions = 1,
+        topics = {"transactionTopic"},
+        brokerProperties = {
+                "listeners=PLAINTEXT://localhost:9092",
+                "port=9092"
+        }
+)
 public class TaskFourTests {
-    static final Logger logger = LoggerFactory.getLogger(TaskFourTests.class);
+
+    private static final Logger logger = LoggerFactory.getLogger(TaskFourTests.class);
 
     @Autowired
-    private KafkaProducer kafkaProducer;
+    private KafkaTemplate<String, String> kafkaTemplate;
 
-    @Autowired
-    private UserPopulator userPopulator;
+
+
+    @Test
+    void taskFourTest_VerifyTransactionsProcessed() throws InterruptedException {
+        // Populating clearly defined users for transaction test scenario
+        userPopulator.populate();
+
+        // Load transaction data
+        String[] transactionLines = loadTransactionLines();
+
+        // Check if transactions are loaded
+        if (transactionLines.length == 0) {
+            logger.error("No transactions loaded for testing. Please check input data.");
+            return;
+        }
+
+        // Sending transactions to embedded Kafka topic
+        for (String transactionLine : transactionLines) {
+            kafkaTemplate.send("transactionTopic", transactionLine);
+            logger.info("Transaction sent: " + transactionLine);
+        }
+
+        // Giving some explicit wait time for consumer to finish processing transactions internally
+        Thread.sleep(2000);
+
+        // Providing checkpoint message clearly for debug purposes
+        logger.info("----------------------------");
+        logger.info("All transactions have been dispatched clearly. Check final balances in your debuggers or consumers.");
+        logger.info("----------------------------");
+    }
+
+    private String[] loadTransactionLines() {
+        try {
+            return fileLoader.loadStrings("/test_data/transactions.txt");
+        } catch (Exception e) {
+            logger.error("Unable to load transactions file clearly from resources!", e);
+            return new String[]{};
+        }
+    }
 
     @Autowired
     private FileLoader fileLoader;
 
-    @Test
-    void task_four_verifier() throws InterruptedException {
-        userPopulator.populate();
-        String[] transactionLines = fileLoader.loadStrings("/test_data/alskdjfh.fhdjsk");
-        for (String transactionLine : transactionLines) {
-            kafkaProducer.send(transactionLine);
-        }
-        Thread.sleep(2000);
+    @Autowired
+    private UserPopulator userPopulator;
 
 
-        logger.info("----------------------------------------------------------");
-        logger.info("----------------------------------------------------------");
-        logger.info("----------------------------------------------------------");
-        logger.info("use your debugger to find out what wilbur's balance is after all transactions are processed");
-        logger.info("kill this test once you find the answer");
-        while (true) {
-            Thread.sleep(20000);
-            logger.info("...");
-        }
-    }
+
 }

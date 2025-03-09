@@ -1,0 +1,4 @@
+kafka:
+  consumer:
+    group-id: midas-core-group
+  topic: my-test-topic
